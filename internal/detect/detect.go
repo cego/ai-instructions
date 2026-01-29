@@ -6,6 +6,34 @@ import (
 	"strings"
 )
 
+func extractMajorVersion(version string) string {
+	if version == "" {
+		return ""
+	}
+
+	// Remove common version prefixes and constraints
+	version = strings.TrimSpace(version)
+	version = strings.Split(version, "||")[0]
+	version = strings.Split(version, " ")[0]
+	version = strings.TrimLeft(version, "^~><>=v ")
+
+	// Extract only the major version (first numeric segment)
+	var major strings.Builder
+	for _, r := range version {
+		if r >= '0' && r <= '9' {
+			major.WriteRune(r)
+		} else if r == '.' {
+			// Stop at the first dot
+			break
+		} else {
+			// Stop at any other non-numeric character
+			break
+		}
+	}
+
+	return major.String()
+}
+
 // DetectStack is used to detect the stack of a project (recursively)
 func DetectStack(projectRoot string) (*DetectedStack, error) {
 	stack := &DetectedStack{}

@@ -38,13 +38,13 @@ func detectFromPackageJson(projectRoot string, stack *DetectedStack) error {
 	}
 
 	if v, ok := get("nuxt"); ok && stack.Nuxt == "" {
-		stack.Nuxt = v
+		stack.Nuxt = extractMajorVersion(v)
 	}
 	if v, ok := get("vue"); ok && stack.Vue == "" {
-		stack.Vue = v
+		stack.Vue = extractMajorVersion(v)
 	}
 	if v, ok := get("@nuxt/ui"); ok && stack.NuxtUI == "" {
-		stack.NuxtUI = v
+		stack.NuxtUI = extractMajorVersion(v)
 	}
 
 	return nil
@@ -78,12 +78,12 @@ func detectFromPackageLockJson(projectRoot string, stack *DetectedStack) error {
 
 	if stack.NuxtUI == "" {
 		if dep, ok := lock.Dependencies["@nuxt/ui"]; ok && dep.Version != "" {
-			stack.NuxtUI = dep.Version
+			stack.NuxtUI = extractMajorVersion(dep.Version)
 			return nil
 		}
 
 		if pkg, ok := lock.Packages["node_modules/@nuxt/ui"]; ok && pkg.Version != "" {
-			stack.NuxtUI = pkg.Version
+			stack.NuxtUI = extractMajorVersion(pkg.Version)
 			return nil
 		}
 	}
