@@ -32,21 +32,21 @@ func detectFromComposer(projectRoot string, stack *DetectedStack) error {
 	// Detect PHP
 	if stack.PHP == "" && c.Config.Platform != nil {
 		if php, ok := c.Config.Platform["php"]; ok {
-			stack.PHP = php
+			stack.PHP = extractMajorVersion(php)
 		}
 	}
 
 	// Detect PHP
 	if stack.PHP == "" {
 		if php, ok := c.Require["php"]; ok {
-			stack.PHP = php
+			stack.PHP = extractMajorVersion(php)
 		}
 	}
 
 	// Detect Laravel
 	if stack.Laravel == "" {
 		if v, ok := c.Require["laravel/framework"]; ok {
-			stack.Laravel = v
+			stack.Laravel = extractMajorVersion(v)
 		}
 	}
 
@@ -77,7 +77,7 @@ func detectFromComposerLock(projectRoot string, stack *DetectedStack) error {
 	if stack.Laravel == "" {
 		for _, pkg := range lock.Packages {
 			if pkg.Name == "laravel/framework" {
-				stack.Laravel = pkg.Version
+				stack.Laravel = extractMajorVersion(pkg.Version)
 				break
 			}
 		}
