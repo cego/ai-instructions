@@ -1,15 +1,29 @@
+## Stack
+
+- Nuxt: 4.x
+
+---
+
 # AI Instructions for @spilnu/core and Related Projects
 
 This document provides coding guidelines and preferences for AI assistants working on projects that use `@spilnu/core` or similar codebases.
+
+**Important**: This document covers both:
+1. **Development of the `@spilnu/core` package itself** (when working in the core module repository)
+2. **Projects consuming `@spilnu/core`** (applications using the package as a dependency)
+
+When file paths are mentioned without context, they refer to the consuming project. Paths specific to the `@spilnu/core` package internals are explicitly prefixed with "Within `@spilnu/core`:" or similar clarification.
 
 ## Project Context
 
 - **Framework**: Nuxt 4 with Vue 3 and TypeScript
 - **Package Type**: Nuxt module providing core functionality for multiple brands
+- **Architecture**: Monorepo-style module with feature sub-modules (`modules/`)
 - **Target Platforms**: Desktop and mobile web applications (responsive design)
 - **Primary Markets**: Danish and English gaming/casino applications
 - **Styling**: SCSS with mobile-first approach
-- **Testing**: @nuxt/test-utils, Vitest for unit tests. @nuxt/test-utils, Vitest and optionally Playwright (with @nuxt/test-utils integration) for integration/e2e tests.
+- **Testing**: Vitest 4.x with `@nuxt/test-utils` for unit and Nuxt integration tests
+- **Package Manager**: Bun (private registry scopes for `@cego`, `@spilnu`, `@engage`)
 
 ## AI Assistant Tools & Resources
 
@@ -17,8 +31,8 @@ This document provides coding guidelines and preferences for AI assistants worki
 
 **Always use the Nuxt MCP Server when available** for accurate, up-to-date Nuxt documentation:
 
-- **MCP Server**: `@nuxt` (antfu/nuxt-mcp)
-- **Endpoint**: `https://mcp.nuxt.com/sse`
+- **MCP Server**: `@nuxt`
+- **Endpoint**: `https://nuxt.com/mcp`
 - **Setup**: Configure in VS Code via `.vscode/settings.json` or user MCP settings
 - **Capabilities**:
     - Search official Nuxt documentation (Nuxt Core, Nuxt UI, Nuxt Content, NuxtHub)
@@ -48,8 +62,8 @@ This document provides coding guidelines and preferences for AI assistants worki
 
 ### Linting & Code Quality
 
-- Use `@cego/eslint-config-nuxt` for ESLint configuration
-- Run `npm run lint:fix` before committing
+- Use `@cego/eslint-config-nuxt` for ESLint configuration (flat config format via `eslint.config.mjs`)
+- Run `bun run lint:fix` before committing
 - Follow TypeScript strict mode conventions
 - Enable `noUncheckedIndexedAccess` in TypeScript config
 
@@ -153,10 +167,11 @@ const props = defineProps<UILoaderProps>()
 
 ### Type Definitions
 
-- Store shared types in `src/runtime/types/`
+- Store shared types in `types/` directory of your project
 - Use type imports: `import type { ... } from '...'`
 - Prefer interfaces over types for object shapes
 - Define component-specific interfaces and extract to separate type file in `types/components/` if used by multiple components
+- When consuming `@spilnu/core`, import types from package exports (e.g., `import type { SomeType } from '@spilnu/core'`)
 
 ### Type Naming
 
@@ -205,6 +220,19 @@ import { onUnmounted, onMounted, watch, computed, ref } from '#imports'
 - Prefer es-toolkit over lodash or custom utilities for common operations
 - Examples from codebase: `pick(props, allowedKeys)`, `groupBy(items, 'category')`
 
+**zod** - For schema validation:
+
+- Use `zod` for runtime data validation and schema definitions
+- Prefer zod over manual validation logic
+
+**vee-validate** - For form validation:
+
+- Use `vee-validate` for form validation in Vue components
+
+**maska** - For input masking:
+
+- Use `maska` for input masking (e.g., phone numbers, dates)
+
 **Why:**
 
 - Battle-tested, optimized implementations
@@ -222,23 +250,23 @@ import { onUnmounted, onMounted, watch, computed, ref } from '#imports'
 **Example - Prefer library utilities:**
 
 ```typescript
-// ❌ Avoid writing custom implementations
+// Avoid writing custom implementations
 const picked = Object.keys(props)
     .filter(key => allowedKeys.includes(key))
     .reduce((obj, key) => ({ ...obj, [key]: props[key] }), {})
 
-// ✅ Use es-toolkit
+// Use es-toolkit
 import { pick } from 'es-toolkit'
 const picked = pick(props, allowedKeys)
 
-// ❌ Avoid custom debounce
+// Avoid custom debounce
 let timeout: NodeJS.Timeout
 const handleSearch = (value: string) => {
     clearTimeout(timeout)
     timeout = setTimeout(() => search(value), 300)
 }
 
-// ✅ Use @vueuse/core
+// Use @vueuse/core
 import { useDebounceFn } from '@vueuse/core'
 const handleSearch = useDebounceFn((value: string) => search(value), 300)
 ```
@@ -388,8 +416,9 @@ const handleSearch = useDebounceFn((value: string) => search(value), 300)
 ### File Naming
 
 - Prefix with `use`: `usePlayerAccountClient.ts`, `useApi.ts`, `useDayjs.ts`
-- Place in `src/runtime/composables/`
-- Data-fetching composables go in `src/runtime/composables/data/`
+- Place in `composables/` directory of your project
+- Data-fetching client composables typically go in `composables/data/`
+- Data-layer primitives (`useQuery`, `useMutation`, etc.) are provided by `@spilnu/core` via auto-imports
 
 ### Composable Structure
 
@@ -457,15 +486,38 @@ export const useDialog = (): UseDialogReturn => {
 
 ## API Integration
 
+### Data Layer Architecture
+
+`@spilnu/core` provides a custom data-fetching layer (located within the package at `@spilnu/core/src/runtime/composables/data-layer/`) built on top of Nuxt's `useAsyncData`. It provides:
+
+| Composable | Purpose |
+|---|---|
+| `useQuery` | Primary query composable wrapping `useAsyncData` with cache TTL, `enabled` ref/getter, abort controller |
+| `useLazyQuery` | Convenience wrapper calling `useQuery` with `lazy: true, server: false` |
+| `useInfiniteQuery` | Pagination support with `fetchNextPage()`/`fetchPreviousPage()` |
+| `useMutation` | Standalone mutation state management with `mutate()`/`mutateAsync()` and lifecycle hooks |
+| `useQueryClient` | Query management: `invalidateQueries()`, `refetchQueries()`, `removeQueries()`, `matchQueries()` |
+| `useQueryCache` | TTL-based cache for `getCachedData` integration |
+
 ### useApi vs typed clients with useOpenapi
 
-Some endpoints / services are not typed, which means we should use `useApi`. Otherwise in most cases we should use a typed client using `useOpenapi` and generate from openapi spec in `configs/clients/<some-client>` and generate the types using `npm run generate:clients`.
+Some endpoints / services are not typed, which means we should use `useApi`. Otherwise in most cases we should use a typed client using `useOpenapi` and generate from openapi spec in `configs/clients/<some-client>` and generate the types using `bun run generate:clients`.
 
-### Clients
+**`useApi`** - Low-level `$fetch`-based client:
+- Wraps `ofetch`'s `$fetch.create()` with preconfigured interceptors
+- Handles cookie forwarding (SSR), auth redirect on 401, service base URL resolution
+- Supports `enableLegacySupport` for monolith endpoints
 
-`useQuery` and `useMutation` should be colocated based on services in client composables .e.g. `usePlayerAccountClient` for the `player-account` service.
+**`useOpenapi`** - Type-safe OpenAPI client:
+- Wraps `openapi-fetch`'s `createClient<Paths>()` with typed paths
+- Same middleware pattern: cookie forwarding, 401 redirect, service URL resolution
+- Throws `OpenapiError` on non-OK responses
 
-```
+### Client Composables
+
+`useQuery` and `useMutation` should be colocated based on services in client composables e.g. `usePlayerAccountClient` for the `player-account` service. Place your project's client composables in `composables/data/`.
+
+```typescript
 // In usePlayerAccountClient.ts
 
 export const usePlayerAccountClient = () => {
@@ -505,33 +557,58 @@ export const usePlayerAccountClient = () => {
 
 Don't handle errors inside useMutation, since useMutation wraps the handler function in a try/catch and manages error-handling, request status and more.
 
-```
 ### Using useLazyQuery
 
 **For data that loads after initial render:**
 
 ```typescript
-const { data, error, pending } = await useLazyQuery('/api/endpoint', {
-    query: computed(() => ({
-        id: route.params.id
-    }))
+const { data, error, pending } = useLazyQuery(async () => {
+    const { data } = await client.GET('/some/endpoint')
+    return data
+}, {
+    key: 'myQuery:lazyData'
 })
+```
+
+### OpenAPI Client Generation
+
+OpenAPI specs are stored in `configs/clients/` as JSON files in your project. Generate types with:
+
+```bash
+bun run generate:clients
 ```
 
 ## Nuxt Module Development
 
-### Module Structure
+**Note**: This section applies when developing the `@spilnu/core` package itself, not when consuming it.
 
-- Main module file: `src/module.ts`
-- Runtime code: `src/runtime/`
-- Type definitions: `src/runtime/types/`
+### Module Structure (within `@spilnu/core`)
+
+- Main module file: `@spilnu/core/src/module.ts`
+- Runtime code: `@spilnu/core/src/runtime/`
+- Type definitions: `@spilnu/core/src/runtime/types/`
 - Build config: `build.config.ts`
+- Feature sub-modules: `@spilnu/core/modules/<feature>/module.ts`
 
-### Module Options
+### Feature Sub-Modules (within `@spilnu/core`)
 
-- Define options interface in `src/runtime/types/global.ts`
-- Provide sensible defaults in `src/options/index.ts`
-- Make options available via `useCoreConfig()`
+The `@spilnu/core` package uses feature sub-modules in `@spilnu/core/modules/`, each following the same runtime structure:
+
+| Module | Purpose |
+|---|---|
+| `modules/game/` | Game tiles, lists, search, jackpots, bonus play |
+| `modules/nimbus/` | Hero sections, bingo, blog, press, Strapi CMS, account flows |
+| `modules/payment/` | Deposits, withdrawals, money limits |
+| `modules/promotion/` | Signup bundles/offers |
+| `modules/responsible-gambling/` | Responsible gambling features |
+
+Each sub-module has its own `module.ts` entry, `runtime/` directory with components, composables, types, i18n locales, and other resources.
+
+### Module Options (within `@spilnu/core`)
+
+- Module options interface is defined in `@spilnu/core/src/runtime/types/global.ts`
+- Defaults are provided in `@spilnu/core/src/options/index.ts`
+- Access options in consuming projects via `useCoreConfig()`
 
 ### Adding Components
 
@@ -562,13 +639,33 @@ addPlugin({
 
 ## Testing
 
+### Test Configuration
+
+`@spilnu/core` provides a shared `defineVitestConfig()` helper from `@spilnu/core/test-utils/config` which creates a multi-project Vitest setup:
+
+| Project | Glob Pattern | Environment | Purpose |
+|---|---|---|---|
+| **unit** | `test/{e2e,unit}/**/*.{test,spec}.ts` | `node` | Pure logic tests (no Nuxt/Vue context) |
+| **nuxt** | `test/nuxt/**/*.{test,spec}.ts` | `nuxt` (via `@nuxt/test-utils`) | Tests requiring Nuxt runtime (`#imports`, `#app`) |
+
+**Using in your project:**
+
+```typescript
+// vitest.config.ts
+import { defineVitestConfig } from '@spilnu/core/test-utils/config'
+
+export default defineVitestConfig()
+```
+
 ### Test File Naming
 
 - Unit tests: `*.test.ts` or `*.spec.ts`
-- Place in `test/unit/` or `test/nuxt/`
-- Mirror the source file structure
+- Place in `test/unit/` for pure logic or `test/nuxt/` for Nuxt-dependent tests
+- Mirror the source file structure (e.g., `test/unit/composables/`, `test/nuxt/utils/`)
 
 ### Test Structure
+
+**Unit tests (node environment):**
 
 ```typescript
 import { describe, it, expect } from 'vitest'
@@ -585,6 +682,43 @@ describe('ComponentName', () => {
         expect(result).toBe('expected')
     })
 })
+```
+
+**Nuxt tests (with auto-imports and Nuxt context):**
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mockNuxtImport } from '@nuxt/test-utils/runtime'
+
+// Mock auto-imported composables
+mockNuxtImport('useSomeComposable', () => vi.fn(() => ({ ... })))
+
+describe('useMyComposable', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('should handle data', () => {
+        // Import composable from your project's composables directory
+        const { useMyComposable } = await import('~/composables/useMyComposable')
+        // ...
+    })
+})
+```
+
+### Test Utilities
+
+`@spilnu/core` provides shared testing infrastructure via package exports:
+
+- `@spilnu/core/test-utils` - Mock helpers (e.g., `mocks.mockAll()` for plugin mocks)
+- `@spilnu/core/test-utils/config` - Shared `defineVitestConfig()` function for consistent test setup
+
+### Running Tests
+
+```bash
+bun run test          # Run all tests
+bun run test:dev      # Watch mode
+bun run test:coverage # With Istanbul coverage
 ```
 
 ## Commit & Documentation
@@ -687,8 +821,8 @@ watch(source, (newVal, oldVal) => {
 
 ### Security Headers
 
-- All CSP rules are configured in `src/module.ts`
-- Use `getTrustedOrigins()` helper for environment-based domains
+- All CSP rules are configured within `@spilnu/core/src/module.ts`
+- Use `getTrustedOrigins()` helper (provided by `@spilnu/core`) for environment-based domains
 - Never expose secrets in public module options (they become public)
 
 ### Performance
@@ -710,8 +844,18 @@ watch(source, (newVal, oldVal) => {
 
 ### Theming
 
+- Theme system is provided by `@spilnu/core` (located at `@spilnu/core/src/runtime/theme/`)
 - Make colors configurable via SCSS variables
 - Use CSS custom properties for runtime theming
+- Configure theme via `moduleOptions.theme` in your project's `nuxt.config.ts`
+
+### Internationalization
+
+- i18n is managed via `@nuxtjs/i18n`
+- Core locale files are provided by `@spilnu/core` (at `@spilnu/core/src/runtime/i18n/locales/`)
+- Each `@spilnu/core` sub-module has its own `i18n/locales/` directory
+- Project-specific translations go in your project's `i18n/` or `locales/` directory
+- Supports Danish (da) and English (en)
 
 ## Questions & Edge Cases
 
@@ -724,48 +868,10 @@ When encountering ambiguous situations:
     - Provide context and your reasoning
 4. **Prioritize consistency** with existing codebase over personal preference
 
-## File Structure Reference
-
-```
-├── src/
-│   ├── module.ts                      # Main module entry
-│   ├── options/                       # Module configuration
-│   ├── runtime/
-│   │   ├── components/                # Vue components (auto-imported)
-│   │   │   ├── UI/                   # UI components (prefixed with UI)
-│   │   │   ├── Account/              # Feature-specific components
-│   │   │   └── Base/                 # Base components
-│   │   ├── composables/              # Composables (auto-imported)
-│   │   │   └── data/                 # Data-fetching composables
-│   │   ├── constants/                # Constants and enums
-│   │   ├── directives/               # Vue directives
-│   │   ├── middleware/               # Nuxt middleware
-│   │   ├── plugins/                  # Nuxt plugins
-│   │   ├── scss/                     # Global styles
-│   │   │   ├── base/                # Base styles, mixins, typography
-│   │   │   ├── components/          # Component-specific styles
-│   │   │   ├── variables.scss       # SCSS variables
-│   │   │   └── main.scss            # Main style entry
-│   │   ├── server/                   # Server utilities
-│   │   │   ├── api/                 # API routes
-│   │   │   └── plugins/             # Nitro plugins
-│   │   ├── types/                    # TypeScript types
-│   │   └── utils/                    # Utility functions
-│   └── utils/                        # Build-time utilities
-├── test/                             # Tests
-│   ├── unit/                        # Unit tests
-│   └── nuxt/                        # Nuxt-specific tests
-└── playground/                       # Development playground
-```
-
 ## Version Information
 
 - **Nuxt**: 4.x
 - **Vue**: 3.x
 - **TypeScript**: 5.x
-- **Node**: >= 22.x
-- **Package Manager**: npm
-
----
-
-**Note**: This document should be copied to any project using `@spilnu/core` as a distribution copy. Keep this file (the original) updated as patterns evolve.
+- **Node**: >= 24.x
+- **Package Manager**: Bun
