@@ -8,6 +8,12 @@
 
 This document provides coding guidelines and preferences for AI assistants working on projects that use `@spilnu/core` or similar codebases.
 
+**Important**: This document covers both:
+1. **Development of the `@spilnu/core` package itself** (when working in the core module repository)
+2. **Projects consuming `@spilnu/core`** (applications using the package as a dependency)
+
+When file paths are mentioned without context, they refer to the consuming project. Paths specific to the `@spilnu/core` package internals are explicitly prefixed with "Within `@spilnu/core`:" or similar clarification.
+
 ## Project Context
 
 - **Framework**: Nuxt 4 with Vue 3 and TypeScript
@@ -161,11 +167,11 @@ const props = defineProps<UILoaderProps>()
 
 ### Type Definitions
 
-- Store shared types in `src/runtime/types/`
+- Store shared types in `types/` directory of your project
 - Use type imports: `import type { ... } from '...'`
 - Prefer interfaces over types for object shapes
 - Define component-specific interfaces and extract to separate type file in `types/components/` if used by multiple components
-- Generated OpenAPI client types live in `src/runtime/types/clients/` (auto-generated via `bun run generate:clients`)
+- When consuming `@spilnu/core`, import types from package exports (e.g., `import type { SomeType } from '@spilnu/core'`)
 
 ### Type Naming
 
@@ -410,9 +416,9 @@ const handleSearch = useDebounceFn((value: string) => search(value), 300)
 ### File Naming
 
 - Prefix with `use`: `usePlayerAccountClient.ts`, `useApi.ts`, `useDayjs.ts`
-- Place in `src/runtime/composables/`
-- Data-fetching client composables go in `src/runtime/composables/data/`
-- Data-layer primitives (useQuery, useMutation, etc.) live in `src/runtime/composables/data-layer/`
+- Place in `composables/` directory of your project
+- Data-fetching client composables typically go in `composables/data/`
+- Data-layer primitives (`useQuery`, `useMutation`, etc.) are provided by `@spilnu/core` via auto-imports
 
 ### Composable Structure
 
@@ -482,7 +488,7 @@ export const useDialog = (): UseDialogReturn => {
 
 ### Data Layer Architecture
 
-The project has a custom data-fetching layer in `src/runtime/composables/data-layer/` built on top of Nuxt's `useAsyncData`. It provides:
+`@spilnu/core` provides a custom data-fetching layer (located within the package at `@spilnu/core/src/runtime/composables/data-layer/`) built on top of Nuxt's `useAsyncData`. It provides:
 
 | Composable | Purpose |
 |---|---|
@@ -509,7 +515,7 @@ Some endpoints / services are not typed, which means we should use `useApi`. Oth
 
 ### Client Composables
 
-`useQuery` and `useMutation` should be colocated based on services in client composables e.g. `usePlayerAccountClient` for the `player-account` service. All client composables live in `src/runtime/composables/data/`.
+`useQuery` and `useMutation` should be colocated based on services in client composables e.g. `usePlayerAccountClient` for the `player-account` service. Place your project's client composables in `composables/data/`.
 
 ```typescript
 // In usePlayerAccountClient.ts
@@ -566,7 +572,7 @@ const { data, error, pending } = useLazyQuery(async () => {
 
 ### OpenAPI Client Generation
 
-OpenAPI specs are stored in `configs/clients/` as JSON files. The `redocly.yml` file maps specs to output files in `src/runtime/types/clients/`. Generate with:
+OpenAPI specs are stored in `configs/clients/` as JSON files in your project. Generate types with:
 
 ```bash
 bun run generate:clients
@@ -574,17 +580,19 @@ bun run generate:clients
 
 ## Nuxt Module Development
 
-### Module Structure
+**Note**: This section applies when developing the `@spilnu/core` package itself, not when consuming it.
 
-- Main module file: `src/module.ts`
-- Runtime code: `src/runtime/`
-- Type definitions: `src/runtime/types/`
+### Module Structure (within `@spilnu/core`)
+
+- Main module file: `@spilnu/core/src/module.ts`
+- Runtime code: `@spilnu/core/src/runtime/`
+- Type definitions: `@spilnu/core/src/runtime/types/`
 - Build config: `build.config.ts`
-- Feature sub-modules: `modules/<feature>/module.ts`
+- Feature sub-modules: `@spilnu/core/modules/<feature>/module.ts`
 
-### Feature Sub-Modules
+### Feature Sub-Modules (within `@spilnu/core`)
 
-The project uses feature sub-modules in `modules/`, each following the same runtime structure as `src/runtime/`:
+The `@spilnu/core` package uses feature sub-modules in `@spilnu/core/modules/`, each following the same runtime structure:
 
 | Module | Purpose |
 |---|---|
@@ -594,13 +602,13 @@ The project uses feature sub-modules in `modules/`, each following the same runt
 | `modules/promotion/` | Signup bundles/offers |
 | `modules/responsible-gambling/` | Responsible gambling features |
 
-Each sub-module has its own `module.ts` entry, `runtime/` directory with components, composables, types, i18n locales, and other resources. They are registered in the root `nuxt.config.ts`.
+Each sub-module has its own `module.ts` entry, `runtime/` directory with components, composables, types, i18n locales, and other resources.
 
-### Module Options
+### Module Options (within `@spilnu/core`)
 
-- Define options interface in `src/runtime/types/global.ts`
-- Provide sensible defaults in `src/options/index.ts`
-- Make options available via `useCoreConfig()`
+- Module options interface is defined in `@spilnu/core/src/runtime/types/global.ts`
+- Defaults are provided in `@spilnu/core/src/options/index.ts`
+- Access options in consuming projects via `useCoreConfig()`
 
 ### Adding Components
 
@@ -633,14 +641,21 @@ addPlugin({
 
 ### Test Configuration
 
-Tests use a shared `defineVitestConfig()` from `test-utils/config.ts` which creates a multi-project Vitest setup:
+`@spilnu/core` provides a shared `defineVitestConfig()` helper from `@spilnu/core/test-utils/config` which creates a multi-project Vitest setup:
 
 | Project | Glob Pattern | Environment | Purpose |
 |---|---|---|---|
 | **unit** | `test/{e2e,unit}/**/*.{test,spec}.ts` | `node` | Pure logic tests (no Nuxt/Vue context) |
 | **nuxt** | `test/nuxt/**/*.{test,spec}.ts` | `nuxt` (via `@nuxt/test-utils`) | Tests requiring Nuxt runtime (`#imports`, `#app`) |
 
-The test-utils config is also exported as `@spilnu/core/test-utils/config` for reuse in consuming packages.
+**Using in your project:**
+
+```typescript
+// vitest.config.ts
+import { defineVitestConfig } from '@spilnu/core/test-utils/config'
+
+export default defineVitestConfig()
+```
 
 ### Test File Naming
 
@@ -684,8 +699,8 @@ describe('useMyComposable', () => {
     })
 
     it('should handle data', () => {
-        // Import from source path
-        const { useMyComposable } = await import('../../../src/runtime/composables/useMyComposable')
+        // Import composable from your project's composables directory
+        const { useMyComposable } = await import('~/composables/useMyComposable')
         // ...
     })
 })
@@ -693,10 +708,10 @@ describe('useMyComposable', () => {
 
 ### Test Utilities
 
-The `test-utils/` directory exports shared mock infrastructure:
+`@spilnu/core` provides shared testing infrastructure via package exports:
 
 - `@spilnu/core/test-utils` - Mock helpers (e.g., `mocks.mockAll()` for plugin mocks)
-- `@spilnu/core/test-utils/config` - Shared `defineVitestConfig()` function
+- `@spilnu/core/test-utils/config` - Shared `defineVitestConfig()` function for consistent test setup
 
 ### Running Tests
 
@@ -806,8 +821,8 @@ watch(source, (newVal, oldVal) => {
 
 ### Security Headers
 
-- All CSP rules are configured in `src/module.ts`
-- Use `getTrustedOrigins()` helper for environment-based domains
+- All CSP rules are configured within `@spilnu/core/src/module.ts`
+- Use `getTrustedOrigins()` helper (provided by `@spilnu/core`) for environment-based domains
 - Never expose secrets in public module options (they become public)
 
 ### Performance
@@ -829,16 +844,17 @@ watch(source, (newVal, oldVal) => {
 
 ### Theming
 
-- Theme system lives in `src/runtime/theme/` with theme definitions in `themes/`
+- Theme system is provided by `@spilnu/core` (located at `@spilnu/core/src/runtime/theme/`)
 - Make colors configurable via SCSS variables
 - Use CSS custom properties for runtime theming
-- Theme is configurable via `moduleOptions.theme`
+- Configure theme via `moduleOptions.theme` in your project's `nuxt.config.ts`
 
 ### Internationalization
 
 - i18n is managed via `@nuxtjs/i18n`
-- Core locale files live in `src/runtime/i18n/locales/`
-- Each sub-module has its own `i18n/locales/` directory
+- Core locale files are provided by `@spilnu/core` (at `@spilnu/core/src/runtime/i18n/locales/`)
+- Each `@spilnu/core` sub-module has its own `i18n/locales/` directory
+- Project-specific translations go in your project's `i18n/` or `locales/` directory
 - Supports Danish (da) and English (en)
 
 ## Questions & Edge Cases
