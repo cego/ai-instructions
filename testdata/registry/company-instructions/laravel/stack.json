@@ -1,0 +1,22 @@
+{
+  "name": "Laravel",
+  "version": "1.4.0",
+  "description": "Laravel conventions, Eloquent, form requests, testing",
+  "depends": ["php"],
+  "category": "framework",
+  "files": [
+    "conventions.md",
+    "eloquent.md",
+    "form-requests.md",
+    "testing.md"
+  ],
+  "tools": {
+    "claude": {
+      "include_in_claude_md": true,
+      "include_in_agents_md": true
+    },
+    "cursor": {
+      "include_in_cursorrules": true
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "PHP",
+  "version": "1.2.0",
+  "description": "PHP coding standards and testing patterns",
+  "depends": [],
+  "category": "language",
+  "files": [
+    "coding-standards.md",
+    "testing.md"
+  ],
+  "tools": {
+    "claude": {
+      "include_in_claude_md": true,
+      "include_in_agents_md": true
+    },
+    "cursor": {
+      "include_in_cursorrules": true
+    }
+  }
+}

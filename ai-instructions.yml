@@ -1,0 +1,81 @@
+version: 1
+registry:
+    url: https://gitlab.cego.dk/cego/ai-marketplace
+    branch: master
+instructions_dir: ai-instructions
+mode: platform
+stacks:
+    - laravel
+    - nuxt
+
+# Resolved dependencies — auto-generated, do not edit below this line
+resolved:
+    laravel:
+        version: 1.0.0
+        hash: sha256:d236ca1adff4c24eca4578f70e6a63252a3fd757d6b3bd71d5608acbf2391b3e
+        files:
+            - conventions.md
+            - coding-standards.md
+            - form-requests.md
+            - testing.md
+        file_hashes:
+            coding-standards.md: sha256:e25336c7b30813a089828f35a6672fb355d99f67b8416e21bc836d4a291a405e
+            conventions.md: sha256:60f88c1f2c9a411bee1976af658e6812475d639f3237f5d5da65fdeeea72d465
+            form-requests.md: sha256:c2bddca41f7be6ad8111a138149ca51b0f7e7babbcf949473c1ecb116423cf9e
+            testing.md: sha256:f2a962d891ee4e99d0b38893e57e039e5af4af5e425bbbf2fde02a6c26568491
+        tools:
+            include_in_claude_md: true
+            include_in_agents_md: true
+            include_in_cursorrules: true
+        explicit: true
+    nuxt:
+        version: 1.0.0
+        hash: sha256:029abb61b3d137068aa90b21d9bc14c522cc68dee2f67ebffa398151b381b58e
+        files:
+            - conventions.md
+            - vue-components.md
+            - typescript.md
+            - scss.md
+            - composables.md
+            - api-integration.md
+            - module-development.md
+            - testing.md
+            - branding.md
+        file_hashes:
+            api-integration.md: sha256:13c7fa6954f57441ccaa343cfbdb43b3800da16d06cd0aa5f31dd70d87ac03cf
+            branding.md: sha256:62e3d233f82ffef0c66223cf7a7475251d1186b77f77ee1754c1c89414efa753
+            composables.md: sha256:601163fe9b3b931115c213e87c5bee64e55aa1aa8179e8fe569bc29f3184536f
+            conventions.md: sha256:398a353ad6711cd6af2f21009a16d31c15c846dc050e698dc9a8d1348c5f0e56
+            module-development.md: sha256:d4617c3d1d413967896790cf5b79675136303d81cc903fc49245c51c77028c3e
+            scss.md: sha256:40733533406af3d793c507131b951756357f49bc25852cb7dc741705064d8a0e
+            testing.md: sha256:4ef2bc391a1e153a4a04b9b7a8243d88c8f51cb1008d0f4888d5738b8c4fcbd0
+            typescript.md: sha256:820ccacae2e7c038cbcc5549dc8bdcc252ea16226a13b2707f168ded274c6ede
+            vue-components.md: sha256:acc56a58377e37cfb1ac3cc255766c9147248576c16f32b439deff1f9c3849ff
+        tools:
+            include_in_claude_md: true
+            include_in_agents_md: true
+            include_in_cursorrules: true
+        explicit: true
+    php:
+        version: 1.0.0
+        hash: sha256:5139e5a5d8076d4595afb148532004ddb6d2c98e67a7acf17c05f1b8a9d79a8f
+        files:
+            - coding-standards.md
+            - testing.md
+        file_hashes:
+            coding-standards.md: sha256:bc55dd1aced91c065cabb5724fb4c7ddf26c01d0353784bf078e18dd79302816
+            testing.md: sha256:5bc4e3c7315ee90a0d0535f5f0de3bd0ed65cb1dcf41b6408bd357bbb319c71b
+        tools:
+            include_in_claude_md: true
+            include_in_agents_md: true
+            include_in_cursorrules: true
+        dependency_of: laravel
+    vue:
+        version: 1.0.0
+        hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        files: []
+        tools:
+            include_in_claude_md: true
+            include_in_agents_md: true
+            include_in_cursorrules: true
+        dependency_of: nuxt

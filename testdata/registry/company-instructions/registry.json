@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "generated_at": "2026-02-15T10:00:00Z",
+  "stacks": {
+    "php": {
+      "name": "PHP",
+      "description": "PHP coding standards and testing patterns",
+      "version": "1.2.0",
+      "hash": "sha256:placeholder_php",
+      "category": "language",
+      "depends": []
+    },
+    "laravel": {
+      "name": "Laravel",
+      "description": "Laravel conventions, Eloquent, form requests, testing",
+      "version": "1.4.0",
+      "hash": "sha256:placeholder_laravel",
+      "category": "framework",
+      "depends": ["php"]
+    },
+    "vue": {
+      "name": "Vue",
+      "description": "Vue.js coding standards, Composition API, state management",
+      "version": "1.0.0",
+      "hash": "sha256:placeholder_vue",
+      "category": "language",
+      "depends": []
+    },
+    "nuxt": {
+      "name": "Nuxt",
+      "description": "Nuxt conventions, server routes, middleware",
+      "version": "2.0.0",
+      "hash": "sha256:placeholder_nuxt",
+      "category": "framework",
+      "depends": ["vue"]
+    },
+    "nuxt-ui": {
+      "name": "Nuxt UI",
+      "description": "Nuxt UI component library patterns",
+      "version": "1.0.0",
+      "hash": "sha256:placeholder_nuxt_ui",
+      "category": "library",
+      "depends": ["nuxt"]
+    },
+    "go": {
+      "name": "Go",
+      "description": "Go coding standards and error handling",
+      "version": "1.0.0",
+      "hash": "sha256:placeholder_go",
+      "category": "language",
+      "depends": []
+    },
+    "docker": {
+      "name": "Docker",
+      "description": "Docker conventions and best practices",
+      "version": "1.0.0",
+      "hash": "sha256:placeholder_docker",
+      "category": "infrastructure",
+      "depends": []
+    }
+  }
+}

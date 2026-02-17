@@ -1,20 +1,11 @@
 FROM golang:1.25.0-alpine3.22 AS builder
-
-ARG APP_VERSION="dev"
-ARG APP_BUILD="dev"
-
 WORKDIR /app
-
-COPY go.mod ./
+COPY go.mod go.sum ./
 RUN go mod download
-
 COPY . .
-RUN go build
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /ai-instructions ./cmd/ai-instructions
 
 FROM alpine:3.22.1
-
-WORKDIR /app
-COPY --from=builder /app/ai-instructions /usr/local/bin/
-COPY --from=builder /app/rules ./rules
-
-CMD ["ai-instructions", "help"]
+RUN apk add --no-cache git ca-certificates
+COPY --from=builder /ai-instructions /usr/local/bin/ai-instructions
+ENTRYPOINT ["ai-instructions"]
