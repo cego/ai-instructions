@@ -52,7 +52,6 @@ func WithProjectURL(projectURL string) Option {
 	return func(c *Client) {
 		u, err := url.Parse(strings.TrimRight(projectURL, "/"))
 		if err != nil {
-			c.baseURL = projectURL
 			return
 		}
 		c.gitlabHost = u.Scheme + "://" + u.Host

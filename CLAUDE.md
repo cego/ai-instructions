@@ -3,7 +3,7 @@
 
 If any instruction file is missing or inaccessible, stop and ask for it before proceeding.
 
-This project uses the following instruction stacks: php, laravel, vue, nuxt
+This project uses the following instruction stacks: php, laravel
 
 Read and follow ALL instruction files in the `ai-instructions/company-instructions/` folder:
 - ai-instructions/company-instructions/php/coding-standards.md
@@ -12,15 +12,6 @@ Read and follow ALL instruction files in the `ai-instructions/company-instructio
 - ai-instructions/company-instructions/laravel/coding-standards.md
 - ai-instructions/company-instructions/laravel/form-requests.md
 - ai-instructions/company-instructions/laravel/testing.md
-- ai-instructions/company-instructions/nuxt/conventions.md
-- ai-instructions/company-instructions/nuxt/vue-components.md
-- ai-instructions/company-instructions/nuxt/typescript.md
-- ai-instructions/company-instructions/nuxt/scss.md
-- ai-instructions/company-instructions/nuxt/composables.md
-- ai-instructions/company-instructions/nuxt/api-integration.md
-- ai-instructions/company-instructions/nuxt/module-development.md
-- ai-instructions/company-instructions/nuxt/testing.md
-- ai-instructions/company-instructions/nuxt/branding.md
 
 These are mandatory company standards. Follow them strictly.
 <!-- AI-INSTRUCTIONS:END -->

@@ -18,8 +18,7 @@ It syncs instruction stacks from a central registry into project repos and manag
 ┌──────────────────────────────────────────────────┐
 │           ai-instructions CLI (Go binary)         │
 │                                                   │
-│  Developer: init, add, remove, sync              │
-│  CI:        verify (exit 0 or exit 1)            │
+│  Commands: init, list, sync, verify, version      │
 └──────────────────────┬───────────────────────────┘
                        │ reads/writes
                        ▼
@@ -52,19 +51,16 @@ docker build -t ai-instructions .
 ## Quick start
 
 ```bash
-# 1. Initialize a project (interactive wizard)
-ai-instructions init --registry https://ai-ctx.yourcompany.com
+# 1. Initialize a project with stacks
+ai-instructions init php laravel --registry https://ai-ctx.yourcompany.com
 
-# 2. Check what's installed
+# 2. List all available stacks (marks installed ones)
 ai-instructions list
 
-# 3. Add more stacks
-ai-instructions add docker terraform
-
-# 4. Sync updates from registry
+# 3. Sync updates from registry
 ai-instructions sync
 
-# 5. Verify everything is correct (for CI)
+# 4. Verify everything is correct (for CI)
 ai-instructions verify
 ```
 
@@ -72,15 +68,11 @@ ai-instructions verify
 
 | Command | Description |
 |---------|-------------|
-| `init` | Interactive setup wizard — select mode, vibe mode, and stacks |
-| `add <stack...>` | Add stacks to an existing project |
-| `remove <stack...>` | Remove stacks, with orphan dependency detection |
+| `init <stack> [stack...]` | Initialize project with given stacks, resolve dependencies, download files |
+| `list` | List all registry stacks grouped by category, mark installed ones |
 | `sync` | Download latest files from registry, update managed blocks |
-| `verify` | CI command — check freshness, integrity, and managed blocks |
-| `list` | List installed stacks (offline) |
-| `outdated` | Show stacks with available updates |
-| `search <term>` | Search available stacks in the registry |
-| `doctor` | Run diagnostic checks |
+| `verify [--strict]` | CI gate — check freshness, integrity, and managed blocks |
+| `version` | Print version information |
 
 ## How it works
 
@@ -90,12 +82,11 @@ The CLI never hardcodes stack names or file lists. Everything comes from the reg
 
 ### Dependency resolution
 
-Stacks can declare dependencies. Selecting `laravel` automatically pulls in `php`. Removing `nuxt-ui` detects that `nuxt` and `vue` are now orphaned and offers to remove them.
+Stacks can declare dependencies. Selecting `laravel` automatically pulls in `php`.
 
-```
-ai-instructions init
-# Select: laravel, nuxt-ui
-# Resolved: php → laravel, vue → nuxt → nuxt-ui
+```bash
+ai-instructions init laravel nuxt
+# Resolved: php → laravel, vue → nuxt
 ```
 
 ### Marker-based injection
@@ -124,19 +115,15 @@ These are mandatory company standards. Follow them strictly.
 
 `ai-instructions-settings.json` tracks explicit stacks, resolved dependencies, versions, and SHA256 hashes. Commit this file to your repo.
 
-### Vibe mode
-
-Optional lighter rule set that excludes strict testing patterns and code review rules for prototyping/vibe-coding projects.
-
 ## CI usage
 
-### Generate instructions locally with `gitlab-ci-local`
+### `gitlab-ci-local` jobs
 
-Use the `ai-instructions-generate` job to generate instruction files locally via `gitlab-ci-local`:
+Each command has a corresponding CI job with a `# @Description` comment for `gitlab-ci-local --list`. All jobs require the `ai-instructions` Docker image to be built locally first (`docker build -t ai-instructions .`).
 
 ```yaml
-# @Description Generates AI instructions file
-ai-instructions-generate:
+# @Description Initializes AI instructions with given stacks
+ai-instructions-init:
   tags: [shared-docker-executor]
   image:
     name: ai-instructions:latest
@@ -146,21 +133,9 @@ ai-instructions-generate:
     - { if: $GITLAB_CI == "false", when: manual }
   script:
     - ai-instructions init go docker
-  artifacts:
-    paths: [.github/copilot-instructions.md, AGENTS.md]
-```
 
-Run it with:
-
-```bash
-gitlab-ci-local ai-instructions-generate
-```
-
-To list all available stacks (and see which are already installed):
-
-```yaml
 # @Description Lists all available AI instruction stacks
-ai-instructions-stacks:
+ai-instructions-list:
   tags: [shared-docker-executor]
   image:
     name: ai-instructions:latest
@@ -169,14 +144,52 @@ ai-instructions-stacks:
   rules:
     - { if: $GITLAB_CI == "false", when: manual }
   script:
-    - ai-instructions stacks
+    - ai-instructions list
+
+# @Description Syncs AI instruction files from registry
+ai-instructions-sync:
+  tags: [shared-docker-executor]
+  image:
+    name: ai-instructions:latest
+    entrypoint: [""]
+  needs: []
+  rules:
+    - { if: $GITLAB_CI == "false", when: manual }
+  script:
+    - ai-instructions sync
+
+# @Description Verifies AI instruction files are up to date
+ai-instructions-verify:
+  tags: [shared-docker-executor]
+  image:
+    name: ai-instructions:latest
+    entrypoint: [""]
+  needs: []
+  script:
+    - ai-instructions verify
+
+# @Description Prints AI instructions CLI version
+ai-instructions-version:
+  tags: [shared-docker-executor]
+  image:
+    name: ai-instructions:latest
+    entrypoint: [""]
+  needs: []
+  rules:
+    - { if: $GITLAB_CI == "false", when: manual }
+  script:
+    - ai-instructions version
 ```
+
+Run any job with:
 
 ```bash
-gitlab-ci-local ai-instructions-stacks
+gitlab-ci-local ai-instructions-init
+gitlab-ci-local ai-instructions-list
+gitlab-ci-local ai-instructions-sync
+gitlab-ci-local ai-instructions-verify
+gitlab-ci-local ai-instructions-version
 ```
-
-Both jobs require the `ai-instructions` Docker image to be built locally first (`docker build -t ai-instructions .`).
 
 ### GitLab CI
 
@@ -210,12 +223,12 @@ The `--strict` flag on `verify` makes registry-unreachable a hard failure (exit 
 | Variable | Description |
 |----------|-------------|
 | `AI_INSTRUCTIONS_REGISTRY` | Registry URL |
+| `AI_INSTRUCTIONS_BRANCH` | Registry branch (default: master) |
 | `AI_INSTRUCTIONS_TOKEN` | Auth token for registry |
-| `AI_INSTRUCTIONS_CI` | Force non-interactive mode |
 | `AI_INSTRUCTIONS_NO_COLOR` | Disable colored output |
 | `AI_INSTRUCTIONS_DEBUG` | Enable debug logging |
 
-All are overridable via CLI flags (`--registry`, `--token`, `--debug`).
+All are overridable via CLI flags (`--registry`, `--branch`, `--token`, `--debug`).
 
 ## Development
 
@@ -235,13 +248,13 @@ make clean
 ```
 cmd/ai-instructions/     CLI entrypoint
 internal/
-  cli/                   Command implementations (init, add, sync, ...)
+  cli/                   Command implementations (init, list, sync, verify)
   config/                Settings file read/write/validate
   registry/              HTTP client, cache, GitLab URL builder
   resolver/              Dependency resolution (topological sort)
   filemanager/           Download, hash, verify, cleanup
   injector/              Marker-based CLAUDE.md/AGENTS.md/.cursorrules injection
-  ui/                    Prompts (charmbracelet/huh), styled output, spinner
+  ui/                    Styled terminal output
   exitcodes/             Exit code constants
 testdata/registry/       Sample registry for tests
 ```

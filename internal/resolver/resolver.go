@@ -96,11 +96,9 @@ func (r *Resolver) Resolve(explicit []string) (*Resolution, error) {
 		}
 
 		for _, dep := range info.Depends {
-			depInfo, ok := r.stacks[dep]
-			if !ok {
+			if _, ok := r.stacks[dep]; !ok {
 				return nil, &MissingDependencyError{Stack: current, Dependency: dep}
 			}
-			_ = depInfo
 			if !explicitSet[dep] && dependencyOf[dep] == "" {
 				dependencyOf[dep] = current
 			}
@@ -131,11 +129,8 @@ func (r *Resolver) Resolve(explicit []string) (*Resolution, error) {
 			queue2 = append(queue2, id)
 		}
 	}
-	sort.Strings(queue2) // deterministic order
-
 	var order []string
 	for len(queue2) > 0 {
-		// Sort for deterministic ordering
 		sort.Strings(queue2)
 		node := queue2[0]
 		queue2 = queue2[1:]

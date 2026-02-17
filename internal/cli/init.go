@@ -5,22 +5,22 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 
 	"github.com/company/ai-instructions/internal/config"
+	"github.com/company/ai-instructions/internal/exitcodes"
 	"github.com/company/ai-instructions/internal/filemanager"
 	"github.com/company/ai-instructions/internal/injector"
 	"github.com/company/ai-instructions/internal/registry"
 	"github.com/company/ai-instructions/internal/resolver"
-	"github.com/company/ai-instructions/internal/ui"
 	"github.com/spf13/cobra"
 )
 
 func (a *App) newInitCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "init [stack...]",
+		Use:   "init <stack> [stack...]",
 		Short: "Initialize AI instructions for this project",
-		Long:  "Set up AI instruction stacks for the current project.\nPass stack names as arguments for non-interactive mode, or run without arguments for the interactive wizard.",
+		Long:  "Set up AI instruction stacks for the current project.\nPass stack names as arguments (e.g. ai-instructions init php laravel).",
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.runInit(cmd.Context(), args)
 		},
@@ -28,93 +28,37 @@ func (a *App) newInitCmd() *cobra.Command {
 }
 
 func (a *App) runInit(ctx context.Context, stacks []string) error {
-	interactive := len(stacks) == 0
-
-	if interactive && ui.IsCI() {
-		return &ExitError{Code: 4, Message: "init requires interactive mode — pass stack names as arguments (e.g. ai-instructions init go docker)"}
+	if a.config != nil && len(a.config.Stacks) > 0 {
+		a.output.Warning("Existing config found with stacks: %v", a.config.Stacks)
+		a.output.Info("Re-initializing will replace the current configuration.")
 	}
 
-	// Check if already initialized
-	if interactive && config.ConfigExists(a.projectDir) {
-		confirmed, err := ui.Confirm("This project is already initialized. Reconfigure?")
-		if err != nil {
-			return err
-		}
-		if !confirmed {
-			a.output.Info("Aborted.")
-			return nil
-		}
-	} else if interactive && config.OldSettingsExists(a.projectDir) {
-		confirmed, err := ui.Confirm("Old settings file detected. Reconfigure and migrate?")
-		if err != nil {
-			return err
-		}
-		if !confirmed {
-			a.output.Info("Aborted.")
-			return nil
-		}
-	}
-
-	// Step 1: Fetch registry
 	client, err := a.newRegistryClient()
 	if err != nil {
 		return err
 	}
 
-	var reg *registry.Registry
-	err = ui.WithSpinner("Fetching registry...", func() error {
-		var fetchErr error
-		reg, fetchErr = client.FetchRegistry(ctx)
-		return fetchErr
-	})
+	a.output.Info("Fetching registry...")
+	reg, err := client.FetchRegistry(ctx)
 	if err != nil {
 		return err
 	}
 
-	var selected []string
-	if interactive {
-		// Step 2: Stack selection (interactive)
-		stackOptions := buildStackOptions(reg)
-		selected, err = ui.SelectStacks(stackOptions)
-		if err != nil {
-			return fmt.Errorf("stack selection: %w", err)
+	// Validate provided stacks exist in registry
+	for _, s := range stacks {
+		if _, ok := reg.Stacks[s]; !ok {
+			return &ExitError{Code: exitcodes.UsageError, Message: fmt.Sprintf("stack %q not found in registry", s)}
 		}
-		if len(selected) == 0 {
-			a.output.Warning("No stacks selected. Aborted.")
-			return nil
-		}
-	} else {
-		// Validate provided stacks exist in registry
-		for _, s := range stacks {
-			if _, ok := reg.Stacks[s]; !ok {
-				return &ExitError{Code: 4, Message: fmt.Sprintf("stack %q not found in registry", s)}
-			}
-		}
-		selected = stacks
 	}
 
-	// Step 3: Resolve dependencies
+	// Resolve dependencies
 	stackInfoMap := buildStackInfoMap(reg)
-	res, err := resolver.NewResolver(stackInfoMap).Resolve(selected)
+	res, err := resolver.NewResolver(stackInfoMap).Resolve(stacks)
 	if err != nil {
 		return fmt.Errorf("dependency resolution: %w", err)
 	}
 
-	if interactive {
-		// Step 4: Show confirmation
-		printResolutionSummary(a.output, res, reg)
-
-		confirmed, err := ui.Confirm("Proceed?")
-		if err != nil {
-			return err
-		}
-		if !confirmed {
-			a.output.Info("Aborted.")
-			return nil
-		}
-	}
-
-	// Step 5: Build config and download files
+	// Build config and download files
 	instrDir := config.DefaultInstructionsDir
 	managedDir := instrDir + "/" + config.ManagedDir
 	registryURL := a.registryURL
@@ -129,7 +73,7 @@ func (a *App) runInit(ctx context.Context, stacks []string) error {
 		},
 		InstructionsDir: instrDir,
 		Mode:            "platform",
-		Stacks:          selected,
+		Stacks:          stacks,
 		Resolved:        make(map[string]config.ResolvedStack),
 	}
 
@@ -138,50 +82,45 @@ func (a *App) runInit(ctx context.Context, stacks []string) error {
 
 	fm := filemanager.NewManager(client, a.projectDir, managedDir)
 
-	err = ui.WithSpinner("Downloading instruction files...", func() error {
-		for _, stackID := range res.Order {
-			manifest, fetchErr := client.FetchStackManifest(ctx, stackID)
-			if fetchErr != nil {
-				return fetchErr
-			}
-
-			files := manifest.Files
-
-			if downloadErr := fm.DownloadStack(ctx, stackID, files); downloadErr != nil {
-				return downloadErr
-			}
-
-			// Compute hashes of downloaded files
-			hash, hashErr := filemanager.HashDir(fm.StackDir(stackID))
-			if hashErr != nil {
-				return hashErr
-			}
-			fileHashes, hashErr := filemanager.HashFilesInStack(fm.StackDir(stackID), files)
-			if hashErr != nil {
-				return hashErr
-			}
-
-			rs := config.ResolvedStack{
-				Version:    reg.Stacks[stackID].Version,
-				Hash:       hash,
-				Files:      files,
-				FileHashes: fileHashes,
-				Tools:      toolsConfigFromManifest(manifest.Tools),
-			}
-			if res.Explicit[stackID] {
-				rs.Explicit = true
-			} else {
-				rs.DependencyOf = res.DependencyOf[stackID]
-			}
-			cfg.Resolved[stackID] = rs
+	a.output.Info("Downloading instruction files...")
+	for _, stackID := range res.Order {
+		manifest, fetchErr := client.FetchStackManifest(ctx, stackID)
+		if fetchErr != nil {
+			return fmt.Errorf("downloading stacks: %w", fetchErr)
 		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("downloading stacks: %w", err)
+
+		files := manifest.Files
+
+		if downloadErr := fm.DownloadStack(ctx, stackID, files); downloadErr != nil {
+			return fmt.Errorf("downloading stacks: %w", downloadErr)
+		}
+
+		// Compute hashes of downloaded files
+		hash, hashErr := filemanager.HashDir(fm.StackDir(stackID))
+		if hashErr != nil {
+			return fmt.Errorf("downloading stacks: %w", hashErr)
+		}
+		fileHashes, hashErr := filemanager.HashFilesInStack(fm.StackDir(stackID), files)
+		if hashErr != nil {
+			return fmt.Errorf("downloading stacks: %w", hashErr)
+		}
+
+		rs := config.ResolvedStack{
+			Version:    reg.Stacks[stackID].Version,
+			Hash:       hash,
+			Files:      files,
+			FileHashes: fileHashes,
+			Tools:      toolsConfigFromManifest(manifest.Tools),
+		}
+		if res.Explicit[stackID] {
+			rs.Explicit = true
+		} else {
+			rs.DependencyOf = res.DependencyOf[stackID]
+		}
+		cfg.Resolved[stackID] = rs
 	}
 
-	// Step 6: Save config
+	// Save config
 	if err := config.SaveConfig(a.projectDir, cfg); err != nil {
 		return err
 	}
@@ -194,7 +133,7 @@ func (a *App) runInit(ctx context.Context, stacks []string) error {
 		os.Remove(filepath.Join(a.projectDir, config.LockFile))
 	}
 
-	// Step 7: Inject managed blocks
+	// Inject managed blocks
 	configs := buildInjectorConfigs(res.Order, cfg.Resolved, managedDir)
 	if err := injector.InjectAll(a.projectDir, res.Order, configs, managedDir); err != nil {
 		return err
@@ -211,55 +150,12 @@ func (a *App) runInit(ctx context.Context, stacks []string) error {
 	return nil
 }
 
-func buildStackOptions(reg *registry.Registry) []ui.StackOption {
-	var opts []ui.StackOption
-	for id, meta := range reg.Stacks {
-		opts = append(opts, ui.StackOption{
-			ID:          id,
-			Name:        meta.Name,
-			Description: meta.Description,
-			Category:    meta.Category,
-		})
-	}
-	sort.Slice(opts, func(i, j int) bool {
-		if opts[i].Category != opts[j].Category {
-			return opts[i].Category < opts[j].Category
-		}
-		return opts[i].ID < opts[j].ID
-	})
-	return opts
-}
-
 func buildStackInfoMap(reg *registry.Registry) map[string]resolver.StackInfo {
 	m := make(map[string]resolver.StackInfo)
 	for id, meta := range reg.Stacks {
 		m[id] = resolver.StackInfo{ID: id, Depends: meta.Depends}
 	}
 	return m
-}
-
-func printResolutionSummary(out *ui.Output, res *resolver.Resolution, reg *registry.Registry) {
-	out.Println("\nThe following stacks will be installed:\n")
-
-	out.Println("  Explicit:")
-	for _, id := range res.Order {
-		if res.Explicit[id] {
-			out.Println("    %s", id)
-		}
-	}
-
-	hasDeps := false
-	for _, id := range res.Order {
-		if !res.Explicit[id] {
-			if !hasDeps {
-				out.Println("\n  Auto-included (dependencies):")
-				hasDeps = true
-			}
-			out.Println("    %s (required by %s)", id, res.DependencyOf[id])
-		}
-	}
-
-	out.Println("\n  Total: %d stacks", len(res.Order))
 }
 
 func buildInjectorConfigs(order []string, resolved map[string]config.ResolvedStack, instrDir string) []injector.FileConfig {

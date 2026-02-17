@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -10,45 +12,103 @@ import (
 func (a *App) newListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
-		Short: "List installed stacks",
+		Short: "List all available stacks from the registry",
+		Long:  "Shows all registry stacks grouped by category. Installed stacks are marked with a checkmark and show local vs registry version.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.runList()
+			return a.runList(cmd.Context())
 		},
 	}
 }
 
-func (a *App) runList() error {
-	if err := a.RequireProject(); err != nil {
+func (a *App) runList(ctx context.Context) error {
+	client, err := a.newRegistryClient()
+	if err != nil {
 		return err
 	}
 
-	a.output.Println("Installed stacks:\n")
-
-	// Sort by name
-	ids := make([]string, 0, len(a.config.Resolved))
-	for id := range a.config.Resolved {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-
-	for _, id := range ids {
-		rs := a.config.Resolved[id]
-		origin := "(explicit)"
-		if rs.DependencyOf != "" {
-			origin = fmt.Sprintf("(dep of %s)", rs.DependencyOf)
-		}
-
-		fileCount := len(rs.Files)
-		fileWord := "files"
-		if fileCount == 1 {
-			fileWord = "file"
-		}
-
-		a.output.Println("  %-25s %-20s %s   %d %s", id, origin, rs.Version, fileCount, fileWord)
+	reg, err := client.FetchRegistry(ctx)
+	if err != nil {
+		return err
 	}
 
-	a.output.Println("\nMode: %s", a.config.Mode)
-	a.output.Println("Total: %d stacks, %d files", len(a.config.Resolved), countResolvedFiles(a.config.Resolved))
+	// Load project config if available (works without init)
+	_ = a.LoadProjectConfig()
+
+	installed := make(map[string]string) // stack ID -> local version
+	if a.config != nil && a.config.Resolved != nil {
+		for id, rs := range a.config.Resolved {
+			installed[id] = rs.Version
+		}
+	}
+
+	// Group by category
+	type stackEntry struct {
+		id            string
+		description   string
+		version       string
+		depends       []string
+		localVersion  string
+		isInstalled   bool
+	}
+
+	categories := make(map[string][]stackEntry)
+	for id, meta := range reg.Stacks {
+		localVersion, isInstalled := installed[id]
+		categories[meta.Category] = append(categories[meta.Category], stackEntry{
+			id:           id,
+			description:  meta.Description,
+			version:      meta.Version,
+			depends:      meta.Depends,
+			localVersion: localVersion,
+			isInstalled:  isInstalled,
+		})
+	}
+
+	catNames := make([]string, 0, len(categories))
+	for c := range categories {
+		catNames = append(catNames, c)
+	}
+	sort.Strings(catNames)
+
+	for _, cat := range catNames {
+		entries := categories[cat]
+		sort.Slice(entries, func(i, j int) bool {
+			return entries[i].id < entries[j].id
+		})
+
+		label := cat
+		if len(cat) > 0 {
+			label = strings.ToUpper(cat[:1]) + cat[1:]
+		}
+		a.output.Println("%s:", label)
+
+		for _, e := range entries {
+			status := "  "
+			versionInfo := e.version
+			if e.isInstalled {
+				status = "* "
+				if e.localVersion != e.version {
+					versionInfo = fmt.Sprintf("%s (local: %s)", e.version, e.localVersion)
+				}
+			}
+
+			deps := ""
+			if len(e.depends) > 0 {
+				deps = fmt.Sprintf(" (depends: %s)", strings.Join(e.depends, ", "))
+			}
+
+			a.output.Println("  %s%-14s %s  %s%s", status, e.id, versionInfo, e.description, deps)
+		}
+		a.output.Println("")
+	}
+
+	installedCount := len(installed)
+	totalCount := len(reg.Stacks)
+	if installedCount > 0 {
+		a.output.Println("* = installed (%d/%d)", installedCount, totalCount)
+	} else {
+		a.output.Println("%d stacks available", totalCount)
+	}
 
 	return nil
 }

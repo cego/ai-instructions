@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/company/ai-instructions/internal/exitcodes"
 	"github.com/company/ai-instructions/internal/filemanager"
@@ -102,6 +103,7 @@ func (a *App) runVerify(ctx context.Context, strict bool) error {
 	for stackID := range a.config.Resolved {
 		stackOrder = append(stackOrder, stackID)
 	}
+	sort.Strings(stackOrder)
 	injectorConfigs := buildInjectorConfigs(stackOrder, a.config.Resolved, managedDir)
 
 	blockResults := injector.VerifyAll(a.projectDir, injectorConfigs)
@@ -124,7 +126,7 @@ func (a *App) runVerify(ctx context.Context, strict bool) error {
 	}
 
 	a.output.Error("Verification failed")
-	fmt.Println()
+	a.output.Println("")
 
 	if len(outdatedStacks) > 0 {
 		a.output.Println("Outdated stacks (registry has newer version):")
@@ -137,7 +139,7 @@ func (a *App) runVerify(ctx context.Context, strict bool) error {
 			}
 			a.output.Println("  %s   %s → %s", s, a.config.Resolved[s].Version, regVersion)
 		}
-		fmt.Println()
+		a.output.Println("")
 	}
 
 	if len(tampered) > 0 {
@@ -145,15 +147,15 @@ func (a *App) runVerify(ctx context.Context, strict bool) error {
 		for _, f := range tampered {
 			a.output.Println("  %s", f)
 		}
-		fmt.Println()
+		a.output.Println("")
 	}
 
 	if len(missingBlocks) > 0 {
-		a.output.Println("Missing managed block:")
+		a.output.Println("Missing managed blocks:")
 		for _, f := range missingBlocks {
 			a.output.Println("  %s — AI-INSTRUCTIONS markers not found", f)
 		}
-		fmt.Println()
+		a.output.Println("")
 	}
 
 	a.output.Println("Run: ai-instructions sync")

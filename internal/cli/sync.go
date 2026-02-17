@@ -10,7 +10,6 @@ import (
 	"github.com/company/ai-instructions/internal/filemanager"
 	"github.com/company/ai-instructions/internal/injector"
 	"github.com/company/ai-instructions/internal/resolver"
-	"github.com/company/ai-instructions/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -59,91 +58,86 @@ func (a *App) runSync(ctx context.Context) error {
 	}
 	var updates []updateInfo
 
-	err = ui.WithSpinner("Syncing instruction files...", func() error {
-		for _, stackID := range res.Order {
-			regMeta, exists := reg.Stacks[stackID]
-			if !exists {
-				a.output.Warning("Stack %q no longer exists in registry, skipping", stackID)
+	a.output.Info("Syncing instruction files...")
+	for _, stackID := range res.Order {
+		regMeta, exists := reg.Stacks[stackID]
+		if !exists {
+			a.output.Warning("Stack %q no longer exists in registry, skipping", stackID)
+			continue
+		}
+
+		currentResolved, hasExisting := a.config.Resolved[stackID]
+		a.debugf("sync %s: registry=%s local=%s", stackID, regMeta.Version, currentResolved.Version)
+
+		// Skip download if version matches and local files are intact
+		if hasExisting && currentResolved.Version == regMeta.Version {
+			vInfo := filemanager.StackVerifyInfo{
+				Hash:       currentResolved.Hash,
+				Files:      currentResolved.Files,
+				FileHashes: currentResolved.FileHashes,
+			}
+			result := filemanager.VerifyStack(a.projectDir, managedDir, stackID, vInfo)
+			if result.OK {
+				a.debugf("sync %s: version match + files intact, skipping", stackID)
+				unchanged = append(unchanged, stackID)
+				// Still update explicit/dependency_of in case it changed
+				rs := currentResolved
+				if res.Explicit[stackID] {
+					rs.Explicit = true
+					rs.DependencyOf = ""
+				} else {
+					rs.Explicit = false
+					rs.DependencyOf = res.DependencyOf[stackID]
+				}
+				a.config.Resolved[stackID] = rs
 				continue
 			}
-
-			currentResolved, hasExisting := a.config.Resolved[stackID]
-			a.debugf("sync %s: registry=%s local=%s", stackID, regMeta.Version, currentResolved.Version)
-
-			// Skip download if version matches and local files are intact
-			if hasExisting && currentResolved.Version == regMeta.Version {
-				vInfo := filemanager.StackVerifyInfo{
-					Hash:       currentResolved.Hash,
-					Files:      currentResolved.Files,
-					FileHashes: currentResolved.FileHashes,
-				}
-				result := filemanager.VerifyStack(a.projectDir, managedDir, stackID, vInfo)
-				if result.OK {
-					a.debugf("sync %s: version match + files intact, skipping", stackID)
-					unchanged = append(unchanged, stackID)
-					// Still update explicit/dependency_of in case it changed
-					rs := currentResolved
-					if res.Explicit[stackID] {
-						rs.Explicit = true
-						rs.DependencyOf = ""
-					} else {
-						rs.Explicit = false
-						rs.DependencyOf = res.DependencyOf[stackID]
-					}
-					a.config.Resolved[stackID] = rs
-					continue
-				}
-				// Files tampered — re-download below
-			}
-
-			manifest, fetchErr := client.FetchStackManifest(ctx, stackID)
-			if fetchErr != nil {
-				return fetchErr
-			}
-
-			files := manifest.Files
-
-			if downloadErr := fm.DownloadStack(ctx, stackID, files); downloadErr != nil {
-				return downloadErr
-			}
-
-			hash, hashErr := filemanager.HashDir(fm.StackDir(stackID))
-			if hashErr != nil {
-				return hashErr
-			}
-			fileHashes, hashErr := filemanager.HashFilesInStack(fm.StackDir(stackID), files)
-			if hashErr != nil {
-				return hashErr
-			}
-
-			oldVersion := ""
-			if hasExisting {
-				oldVersion = currentResolved.Version
-			}
-			updates = append(updates, updateInfo{
-				stack:      stackID,
-				oldVersion: oldVersion,
-				newVersion: regMeta.Version,
-			})
-
-			rs := config.ResolvedStack{
-				Version:    regMeta.Version,
-				Hash:       hash,
-				Files:      files,
-				FileHashes: fileHashes,
-				Tools:      toolsConfigFromManifest(manifest.Tools),
-			}
-			if res.Explicit[stackID] {
-				rs.Explicit = true
-			} else {
-				rs.DependencyOf = res.DependencyOf[stackID]
-			}
-			a.config.Resolved[stackID] = rs
+			// Files tampered — re-download below
 		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("syncing: %w", err)
+
+		manifest, fetchErr := client.FetchStackManifest(ctx, stackID)
+		if fetchErr != nil {
+			return fmt.Errorf("syncing: %w", fetchErr)
+		}
+
+		files := manifest.Files
+
+		if downloadErr := fm.DownloadStack(ctx, stackID, files); downloadErr != nil {
+			return fmt.Errorf("syncing: %w", downloadErr)
+		}
+
+		hash, hashErr := filemanager.HashDir(fm.StackDir(stackID))
+		if hashErr != nil {
+			return fmt.Errorf("syncing: %w", hashErr)
+		}
+		fileHashes, hashErr := filemanager.HashFilesInStack(fm.StackDir(stackID), files)
+		if hashErr != nil {
+			return fmt.Errorf("syncing: %w", hashErr)
+		}
+
+		oldVersion := ""
+		if hasExisting {
+			oldVersion = currentResolved.Version
+		}
+		updates = append(updates, updateInfo{
+			stack:      stackID,
+			oldVersion: oldVersion,
+			newVersion: regMeta.Version,
+		})
+
+		rs := config.ResolvedStack{
+			Version:    regMeta.Version,
+			Hash:       hash,
+			Files:      files,
+			FileHashes: fileHashes,
+			Tools:      toolsConfigFromManifest(manifest.Tools),
+		}
+		if res.Explicit[stackID] {
+			rs.Explicit = true
+		} else {
+			rs.DependencyOf = res.DependencyOf[stackID]
+		}
+		a.config.Resolved[stackID] = rs
 	}
 
 	// Cleanup stale stacks

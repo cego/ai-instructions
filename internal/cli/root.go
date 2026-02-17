@@ -13,13 +13,12 @@ import (
 
 // App is the dependency container for all CLI commands.
 type App struct {
-	rootCmd     *cobra.Command
-	version     string
-	commit      string
-	date        string
-	config      *config.Config
-	regClient   *registry.Client
-	output      *ui.Output
+	rootCmd  *cobra.Command
+	version  string
+	commit   string
+	date     string
+	config   *config.Config
+	output   *ui.Output
 	projectDir  string
 	registryURL string
 	branch      string
@@ -72,15 +71,9 @@ func NewApp(version, commit, date string) *App {
 
 	root.AddCommand(
 		app.newInitCmd(),
-		app.newAddCmd(),
-		app.newRemoveCmd(),
 		app.newSyncCmd(),
 		app.newVerifyCmd(),
 		app.newListCmd(),
-		app.newOutdatedCmd(),
-		app.newStacksCmd(),
-		app.newSearchCmd(),
-		app.newDoctorCmd(),
 		app.newVersionCmd(),
 	)
 

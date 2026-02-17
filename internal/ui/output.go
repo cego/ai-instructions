@@ -116,16 +116,3 @@ func (o *Output) Table(headers []string, rows [][]string) {
 	}
 }
 
-// DiffSummary prints a sync diff summary.
-func (o *Output) DiffSummary(stack, oldVersion, newVersion string, updated, added, removed []string) {
-	o.Println("  %s   %s → %s", stack, oldVersion, newVersion)
-	for _, f := range updated {
-		o.Println("    updated: %s", f)
-	}
-	for _, f := range added {
-		o.Println("    added:   %s", f)
-	}
-	for _, f := range removed {
-		o.Println("    removed: %s", f)
-	}
-}
