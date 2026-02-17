@@ -1,0 +1,44 @@
+version: 1
+registry:
+    url: https://gitlab.cego.dk/cego/ai-marketplace
+    branch: master
+instructions_dir: ai-instructions
+mode: platform
+stacks:
+    - php
+    - laravel
+
+# Resolved dependencies — auto-generated, do not edit below this line
+resolved:
+    laravel:
+        version: 1.0.0
+        hash: sha256:d236ca1adff4c24eca4578f70e6a63252a3fd757d6b3bd71d5608acbf2391b3e
+        files:
+            - conventions.md
+            - coding-standards.md
+            - form-requests.md
+            - testing.md
+        file_hashes:
+            coding-standards.md: sha256:e25336c7b30813a089828f35a6672fb355d99f67b8416e21bc836d4a291a405e
+            conventions.md: sha256:60f88c1f2c9a411bee1976af658e6812475d639f3237f5d5da65fdeeea72d465
+            form-requests.md: sha256:c2bddca41f7be6ad8111a138149ca51b0f7e7babbcf949473c1ecb116423cf9e
+            testing.md: sha256:f2a962d891ee4e99d0b38893e57e039e5af4af5e425bbbf2fde02a6c26568491
+        tools:
+            include_in_claude_md: true
+            include_in_agents_md: true
+            include_in_cursorrules: true
+        explicit: true
+    php:
+        version: 1.0.0
+        hash: sha256:5139e5a5d8076d4595afb148532004ddb6d2c98e67a7acf17c05f1b8a9d79a8f
+        files:
+            - coding-standards.md
+            - testing.md
+        file_hashes:
+            coding-standards.md: sha256:bc55dd1aced91c065cabb5724fb4c7ddf26c01d0353784bf078e18dd79302816
+            testing.md: sha256:5bc4e3c7315ee90a0d0535f5f0de3bd0ed65cb1dcf41b6408bd357bbb319c71b
+        tools:
+            include_in_claude_md: true
+            include_in_agents_md: true
+            include_in_cursorrules: true
+        explicit: true

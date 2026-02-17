@@ -1,0 +1,19 @@
+{
+  "name": "Docker",
+  "version": "1.0.0",
+  "description": "Docker conventions and best practices",
+  "depends": [],
+  "category": "infrastructure",
+  "files": [
+    "conventions.md"
+  ],
+  "tools": {
+    "claude": {
+      "include_in_claude_md": true,
+      "include_in_agents_md": false
+    },
+    "cursor": {
+      "include_in_cursorrules": true
+    }
+  }
+}

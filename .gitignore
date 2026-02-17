@@ -8,5 +8,7 @@ AGENTS.md
 .golangci.yml
 .github/copilot-instructions.md
 # binary for building locally
-ai-instructions
+/ai-instructions
 /test
+bin
+.cursorrules
