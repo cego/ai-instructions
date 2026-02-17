@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/company/ai-instructions/internal/config"
-	"github.com/company/ai-instructions/internal/filemanager"
-	"github.com/company/ai-instructions/internal/injector"
-	"github.com/company/ai-instructions/internal/registry"
-	"github.com/company/ai-instructions/internal/resolver"
+	"github.com/cego/ai-instructions/internal/config"
+	"github.com/cego/ai-instructions/internal/filemanager"
+	"github.com/cego/ai-instructions/internal/injector"
+	"github.com/cego/ai-instructions/internal/registry"
+	"github.com/cego/ai-instructions/internal/resolver"
 )
 
 // setupTestRegistry creates an httptest server serving registry data.

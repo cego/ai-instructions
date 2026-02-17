@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/company/ai-instructions/internal/registry"
+	"github.com/cego/ai-instructions/internal/registry"
 )
 
 // validatePathComponent rejects path components that could escape the intended directory.

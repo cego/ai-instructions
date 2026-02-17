@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/company/ai-instructions/internal/config"
+	"github.com/cego/ai-instructions/internal/config"
 )
 
 func TestBuildBlock(t *testing.T) {

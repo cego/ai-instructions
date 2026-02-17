@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/company/ai-instructions/internal/config"
+	"github.com/cego/ai-instructions/internal/config"
 )
 
 func TestVerifyStack(t *testing.T) {

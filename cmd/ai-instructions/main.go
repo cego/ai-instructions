@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/company/ai-instructions/internal/cli"
+	"github.com/cego/ai-instructions/internal/cli"
 )
 
 var (

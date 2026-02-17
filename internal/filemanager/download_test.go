@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/company/ai-instructions/internal/config"
-	"github.com/company/ai-instructions/internal/registry"
+	"github.com/cego/ai-instructions/internal/config"
+	"github.com/cego/ai-instructions/internal/registry"
 )
 
 func TestDownloadStack(t *testing.T) {
@@ -94,10 +94,10 @@ func TestDownloadStack_PathTraversal(t *testing.T) {
 	)
 
 	tests := []struct {
-		name     string
-		stackID  string
-		files    []string
-		wantErr  string
+		name    string
+		stackID string
+		files   []string
+		wantErr string
 	}{
 		{
 			name:    "stack ID with path traversal",

@@ -4,10 +4,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/company/ai-instructions/internal/config"
-	"github.com/company/ai-instructions/internal/exitcodes"
-	"github.com/company/ai-instructions/internal/registry"
-	"github.com/company/ai-instructions/internal/ui"
+	"github.com/cego/ai-instructions/internal/config"
+	"github.com/cego/ai-instructions/internal/exitcodes"
+	"github.com/cego/ai-instructions/internal/registry"
+	"github.com/cego/ai-instructions/internal/ui"
 	"github.com/spf13/cobra"
 )
 

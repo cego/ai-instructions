@@ -1,4 +1,4 @@
-module github.com/company/ai-instructions
+module github.com/cego/ai-instructions
 
 go 1.24.0
 

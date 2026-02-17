@@ -6,12 +6,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/company/ai-instructions/internal/config"
-	"github.com/company/ai-instructions/internal/exitcodes"
-	"github.com/company/ai-instructions/internal/filemanager"
-	"github.com/company/ai-instructions/internal/injector"
-	"github.com/company/ai-instructions/internal/registry"
-	"github.com/company/ai-instructions/internal/resolver"
+	"github.com/cego/ai-instructions/internal/config"
+	"github.com/cego/ai-instructions/internal/exitcodes"
+	"github.com/cego/ai-instructions/internal/filemanager"
+	"github.com/cego/ai-instructions/internal/injector"
+	"github.com/cego/ai-instructions/internal/registry"
+	"github.com/cego/ai-instructions/internal/resolver"
 	"github.com/spf13/cobra"
 )
 
