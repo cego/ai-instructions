@@ -5,6 +5,10 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   release-docker-image:
     name: Release docker image
