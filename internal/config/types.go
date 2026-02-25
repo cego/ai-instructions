@@ -2,7 +2,7 @@ package config
 
 const DefaultInstructionsDir = "ai-instructions"
 const ManagedDir = "company-instructions"
-const DefaultRegistryURL = "https://gitlab.cego.dk/cego/ai-marketplace"
+const DefaultRegistryURL = "https://gitlab.cego.dk/cego/platform-agent-instructions"
 const DefaultBranch = "master"
 
 // ResolvedStack represents a single resolved stack in the lockfile.

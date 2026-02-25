@@ -1,21 +1,3 @@
-<!-- AI-INSTRUCTIONS:START — managed by ai-instructions, do not edit -->
-# Company AI Instructions
-
-If any instruction file is missing or inaccessible, stop and ask for it before proceeding.
-
-This project uses the following instruction stacks: php, laravel
-
-Read and follow ALL instruction files in the `ai-instructions/company-instructions/` folder:
-- ai-instructions/company-instructions/php/coding-standards.md
-- ai-instructions/company-instructions/php/testing.md
-- ai-instructions/company-instructions/laravel/conventions.md
-- ai-instructions/company-instructions/laravel/coding-standards.md
-- ai-instructions/company-instructions/laravel/form-requests.md
-- ai-instructions/company-instructions/laravel/testing.md
-
-These are mandatory company standards. Follow them strictly.
-<!-- AI-INSTRUCTIONS:END -->
-
 ## 1. Project Overview
 * **Name:** ai-instructions
 * **Purpose:** In house developer tooling for code generation and AI interactions in projects and workflows. Can be extended with agents skills, hooks, custom code generation templates and more.
