@@ -3,15 +3,11 @@
 
 If any instruction file is missing or inaccessible, stop and ask for it before proceeding.
 
-This project uses the following instruction stacks: php, laravel
+This project uses the following instruction stacks: php
 
 Read and follow ALL instruction files in the `ai-instructions/company-instructions/` folder:
 - ai-instructions/company-instructions/php/coding-standards.md
 - ai-instructions/company-instructions/php/testing.md
-- ai-instructions/company-instructions/laravel/conventions.md
-- ai-instructions/company-instructions/laravel/coding-standards.md
-- ai-instructions/company-instructions/laravel/form-requests.md
-- ai-instructions/company-instructions/laravel/testing.md
 
 These are mandatory company standards. Follow them strictly.
 <!-- AI-INSTRUCTIONS:END -->
