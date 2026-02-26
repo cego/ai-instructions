@@ -114,17 +114,18 @@ func SaveConfig(dir string, c *Config) error {
 		return fmt.Errorf("marshaling config: %w", err)
 	}
 
-	var content []byte
+	content := []byte("---\n")
 	if len(c.Resolved) > 0 {
 		resolvedPart := configResolvedFields{Resolved: c.Resolved}
 		resolvedBytes, marshalErr := yaml.Marshal(resolvedPart)
 		if marshalErr != nil {
 			return fmt.Errorf("marshaling resolved: %w", marshalErr)
 		}
-		content = append(userBytes, []byte(resolvedSeparator)...)
+		content = append(content, userBytes...)
+		content = append(content, []byte(resolvedSeparator)...)
 		content = append(content, resolvedBytes...)
 	} else {
-		content = userBytes
+		content = append(content, userBytes...)
 	}
 
 	path := filepath.Join(dir, ConfigFile)
