@@ -257,6 +257,31 @@ func TestSaveConfigWithoutResolved(t *testing.T) {
 	}
 }
 
+func TestSaveConfigHasDocumentStart(t *testing.T) {
+	dir := t.TempDir()
+
+	original := &Config{
+		Version: 1,
+		Registry: RegistryConfig{
+			URL: "https://ai-ctx.example.com",
+		},
+		Stacks: []string{"php"},
+	}
+
+	if err := SaveConfig(dir, original); err != nil {
+		t.Fatalf("SaveConfig() error: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, ConfigFile))
+	if err != nil {
+		t.Fatalf("reading config: %v", err)
+	}
+
+	if !strings.HasPrefix(string(data), "---\n") {
+		t.Error("config should start with YAML document start marker '---'")
+	}
+}
+
 func TestSaveConfigHasCommentSeparator(t *testing.T) {
 	dir := t.TempDir()
 
